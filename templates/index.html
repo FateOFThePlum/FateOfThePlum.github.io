@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Camera Feed</title>
+</head>
+<body>
+    <h1>Live Camera Feed</h1>
+    <video id="video" width="640" height="480" autoplay></video>
+    <button id="captureButton">Capture Image</button>
+    <button id="sendButton">Send Image</button>
+
+    <script>
+        const video = document.getElementById('video');
+        const captureButton = document.getElementById('captureButton');
+        const sendButton = document.getElementById('sendButton');
+
+        let stream;
+        let capturedImage;
+
+        // Access the user's camera and display the feed
+        async function initCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+            } catch (err) {
+                console.error('Error accessing camera:', err);
+            }
+        }
+
+        // Capture a frame from the camera feed
+        captureButton.addEventListener('click', () => {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            capturedImage = canvas.toDataURL('image/jpeg');
+        });
+
+        // Send the captured image to the server
+        sendButton.addEventListener('click', async () => {
+            if (capturedImage) {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ image: capturedImage }),
+                });
+
+                const result = await response.json();
+                console.log(result);
+            } else {
+                console.error('No image captured.');
+            }
+        });
+
+        // Initialize the camera when the page loads
+        window.addEventListener('load', initCamera);
+
+        // Stop the camera when the user leaves the page
+        window.addEventListener('beforeunload', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>
